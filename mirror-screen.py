@@ -1252,7 +1252,7 @@ def main() -> int:
         stop_previous_cast()
         # 优先用 C 引擎跑投屏（监管进程常驻 ~1.2MB，Python 版 27.9MB；启动 1ms vs 77ms）
         eng = c_engine_path()
-        if eng and (cfg.get("engine") or "auto") != "python":
+        if eng.exists() and (cfg.get("engine") or "auto") != "python":
             try:
                 sync_portal_script(cfg)          # 远端客户端准备（C 编译/回退），日志在投屏日志里
                 os.execv(str(eng), [str(eng), "--run"])   # exec：不留 Python 进程

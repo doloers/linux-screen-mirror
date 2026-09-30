@@ -329,8 +329,14 @@ static void display_args(const Cfg *c, int *dargc, char **dargv) {
     }
     int fw, fh;
     out_size(c, &fw, &fh);                                 /* 视频帧高（portal/stream 都用这个） */
+    /* 与 Python 的 autofit_arg 对齐：先按逻辑像素留 8px 余量，再乘缩放换成物理高度，最后取 2 位小数 */
+    double h_log = height - 8.0;
+    if (h_log < 300.0) h_log = 300.0;
+    double ws = (h_log * scale) / (double)(fh > 0 ? fh : 760);
+    ws = ((double)((long)(ws * 100.0 + 0.5))) / 100.0;      /* round(x, 2) */
+    if (ws < 1.0) ws = 1.0;
     char buf[64];
-    snprintf(buf, sizeof buf, "--window-scale=%.3f", (height * scale - 8.0) / (fh > 0 ? fh : 760));
+    snprintf(buf, sizeof buf, "--window-scale=%.2f", ws);
     dargv[(*dargc)++] = xstrdup(buf);
 }
 
@@ -344,11 +350,11 @@ static void remote_command(const Cfg *c, char *out, size_t n) {
         return;
     }
     /* wf-recorder 流 */
+    /* 与 Python 的 ENCODE_PROFILES 一字不差 */
     char prof[128] = "preset=superfast crf=20";
-    if (strstr(c->encode, "极速")) snprintf(prof, sizeof prof, "preset=superfast crf=20");
-    else if (strstr(c->encode, "极低") || strstr(c->encode, "ultrafast")) snprintf(prof, sizeof prof, "preset=ultrafast crf=22");
-    else if (strstr(c->encode, "均衡")) snprintf(prof, sizeof prof, "preset=veryfast crf=23");
-    else if (strstr(c->encode, "低带宽")) snprintf(prof, sizeof prof, "preset=medium crf=26");
+    if (strstr(c->encode, "极速")) snprintf(prof, sizeof prof, "preset=ultrafast crf=20");
+    else if (strstr(c->encode, "均衡")) snprintf(prof, sizeof prof, "preset=superfast crf=20");
+    else if (strstr(c->encode, "省带宽")) snprintf(prof, sizeof prof, "preset=medium crf=24");
     char cmd[2048];
     snprintf(cmd, sizeof cmd, "wf-recorder -y -o %s -c %s -x yuv420p -r %s", c->output, c->codec, c->fps);
     char *save = NULL, *tok = strtok_r(prof, " ", &save);
@@ -399,7 +405,10 @@ static void player_argv(const Cfg *c, char **argv, int *n, const char *title) {
         append_argvf(argv, n, "--hwdec=%s", c->hwdec[0] ? c->hwdec : "vaapi");
         append_argvf(argv, n, "--demuxer-lavf-format=%s", c->muxer);
         append_argv(argv, n, "--force-window=immediate");
-        append_argv(argv, n, "--wayland-app-id=portal-cast-fitted");
+        char appid2[128];
+        snprintf(appid2, sizeof appid2, "--wayland-app-id=%s",
+                 strcmp(c->display, "半幅窗口") == 0 ? "portal-cast" : "portal-cast-fitted");
+        append_argv(argv, n, appid2);
         append_argvf(argv, n, "--title=%s", title);
         if (c->lowlat) {
             append_argv(argv, n, "--demuxer-readahead-secs=0");
@@ -427,7 +436,7 @@ static void print_dry_run(const Cfg *c) {
     char rcmd[4096], tgt[400], title[500];
     remote_command(c, rcmd, sizeof rcmd);
     ssh_target(c, tgt, sizeof tgt);
-    snprintf(title, sizeof title, "PORTAL-CAST:%s", tgt);
+    snprintf(title, sizeof title, "%s%s", is_portal(c) ? "PORTAL-CAST:" : "MIRROR:", tgt);
     char *sargv[MAXARGS];
     int sn = 0;
     ssh_argv(c, sargv, &sn);
