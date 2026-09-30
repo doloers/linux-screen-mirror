@@ -37,7 +37,7 @@ EOF
 
 case "${1:-install}" in
   --uninstall|uninstall)
-    rm -f "$BIN" "$APP_DIR/mirror-screen.desktop" "$APP_DIR/mirror-screen-quick.desktop"
+    rm -f "$BIN" "$BIN_DIR/mirror-screen-c" "$BIN_DIR/portal_cast.py" "$BIN_DIR/portal_cast.c" "$APP_DIR/mirror-screen.desktop" "$APP_DIR/mirror-screen-quick.desktop"
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$APP_DIR" 2>/dev/null || true
     echo "已卸载：$BIN 与两个 .desktop"
     echo "配置保留在 $CFG_DIR（要一并删除：rm -rf '$CFG_DIR'）"
@@ -55,6 +55,20 @@ esac
 
 mkdir -p "$BIN_DIR" "$APP_DIR"
 install -m 755 "$SRC/mirror-screen.py" "$BIN"
+# C 版运行时引擎（投屏时常驻的监管进程；编不出来就跳过，TUI 会自动回退 Python 实现）
+if command -v gcc >/dev/null 2>&1 && [ -f "$SRC/mirror-screen-c.c" ]; then
+    if gcc -O2 -s -o "$BIN_DIR/mirror-screen-c" "$SRC/mirror-screen-c.c" 2>/dev/null; then
+        echo "  已装 C 引擎: $BIN_DIR/mirror-screen-c（投屏监管进程 ~1.2MB，Python 版 27.9MB）"
+    else
+        echo "  （C 引擎编译失败，跳过；投屏会走 Python 实现，功能一致）"
+    fi
+else
+    echo "  （无 gcc 或缺源文件，跳过 C 引擎）"
+fi
+# 远端 portal 客户端的源码：python 版是回退，c 版会在手机上编译（更快更省）
+for f in portal_cast.py portal_cast.c; do
+    [ -f "$SRC/$f" ] && install -m 644 "$SRC/$f" "$BIN_DIR/$f"
+done
 write_desktop "$APP_DIR/mirror-screen.desktop" \
   "投屏到另一台 Linux" \
   "用 waypipe + wl-mirror 把另一台 Linux 的画面镜像到本机（TUI 配置器）" ""

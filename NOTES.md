@@ -82,3 +82,20 @@
 - 运行时报文全部写 `~/.local/state/mirror-screen/last-run.log`（含远端 stderr），终端不刷屏。
 - `mpv.log`、`cast.pid` 也在同目录。
 - 关掉投屏窗口 ⇒ 进程退出 ⇒ 自动清理远端编码器/portal 会话；异常早退会有桌面通知。
+
+## 关于 C 重写（2026-09-30）
+
+**改了哪些、没改哪些**：只把热路径的两个进程换成 C —— 远端 portal 客户端、本机投屏监管进程。
+TUI 配置界面、远端体检（`--check`）、waypipe 模式仍在 Python：它们不在关键路径上，搬过去只增加维护面。
+TUI 的 `--run` 用 `execv` 换成 C 引擎（不留 Python 进程），失败自动回退 Python 实现，行为一致。
+
+**为什么收益明显**：这两个进程分别"每次开播启动一次"和"整个投屏期间常驻"。
+Python 解释器 + `gi`/`dbus` 的导入开销让远端客户端要 0.37 s / 25 MB（在开播的关键路径上），
+本机监管进程则常驻 27.9 MB。C 版分别是 0.07 s / 1.2 MB 与 1.9 MB。
+
+**正确性怎么保证**：C 版与 Python 版共用同一份 `config.json`；`--dry-run` 输出逐字节一致
+（ssh 参数、mpv 参数、三种显示方式全对齐）；端到端实测画面正常、比例正确（0.482 ≈ 手机 9:19）。
+
+**踩到的 C 坑**（都在 README 的坑列表里）：D-Bus 父子迭代器混用、`DBUS_TYPE_STRING` 传值语义、
+libdbus 1.16 删掉 unix fd 公开 API（改用 `fcntl` 试探值本身是不是 fd）、GStreamer 参数单 token、
+以及"用 gcc 编译时别把输出管道给 `head`"（SIGPIPE 会让编译静默失败）。

@@ -125,6 +125,22 @@ window-rule {
 `border{off}`/`focus-ring{off}`（无效）、启动后用 IPC 改 `window-scale`（被 mpv 吸附回去）、
 `open-floating true`（尺寸确实稳，但脱离平铺布局 ✗）。
 
+## 性能：热路径的 C 重写
+
+配置界面（TUI）留在 Python，但**真正跑在关键路径上的两个进程**是 C：
+
+| 进程 | 位置 | Python 版 | C 版 | 收益 |
+|---|---|---|---|---|
+| `portal_cast` | **远端（被投屏机）** | 25.3 MB / 启动 0.37–0.41 s | **1.2 MB / 0.07–0.10 s** | 省 24 MB，每次开播省 ~0.3 s |
+| `mirror-screen-c` | 本机（投屏期间常驻的监管进程） | 27.9 MB / 启动 77 ms | **1.9 MB / 1 ms** | 省 26 MB |
+
+- **远端客户端** `portal_cast.c`：只依赖 `libdbus`（不再需要 python3-dbus / PyGObject）。
+  首次开播时**在远端自动编译**（`gcc -O2 … $(pkg-config --cflags --libs dbus-1)`），编译不出来或运行失败
+  自动回退 Python 版（TUI 设置项「远端客户端」= auto / c / python）。
+- **本机监管引擎** `mirror-screen-c.c`：共用同一份 `config.json`，负责预检、`ssh | mpv` 管线、日志、收尾、通知。
+  TUI 的 `--run` 会 `execv` 它（不留 Python 进程）；找不到或 `engine=python` 时行为与以前完全一致。
+- 正确性验证：C 版与 Python 版的 `--dry-run` 输出**逐字节一致**（ssh 参数、mpv 参数、三种显示方式全对齐）。
+
 ## 踩过的坑（血泪）
 
 1. **远端息屏**时抓屏必然失败，现象极像协议/权限问题 —— 开播前必须 `wlr-randr --output <名> --on`
@@ -139,14 +155,18 @@ window-rule {
 8. 清理进程时别用 `pkill -f <模式>` —— 模式会匹配到**自己那条命令行**，把自己杀掉（我踩了两次），
    改用 `pkill -x <进程名>` 或按 PID
 9. 脚本里给 niri 配置文件加标记时，注释必须用 KDL 的 `//`；写成 `#` 会让 `niri validate` 报错、**整个配置加载失败**
+10. 写 C 版 D-Bus 客户端时：父子迭代器必须是**不同变量**（否则消息签名错乱）；`DBUS_TYPE_STRING` 要传**指向指针的指针**；
+    Alpine 的 libdbus 不导出 `dbus_message_get_unix_fd`（1.16 起该公开 API 已删除），而消息里的 fd 值**本身就是 fd** ——
+    用 `fcntl(F_GETFD)` 试探即可两种语义通吃；GStreamer 参数必须是 `min-buffers=2` 这种**单 token**
 
 ## 文件
 
 | 文件 | 说明 |
 |---|---|
 | `mirror-screen.py` | TUI 主程序（配置界面 + 三种模式的执行逻辑） |
-| `install-mirror-screen.sh` | 安装/卸载到 `~/.local/bin`，并生成 fuzzel 入口 |
-| `portal_cast.py` | **远端侧** portal 客户端：ScreenCast → PipeWire → 裸视频写 stdout |
+| `mirror-screen-c.c` | 本机监管引擎（C）：预检 / 管线 / 日志 / 收尾，1.9 MB 常驻 |
+| `install-mirror-screen.sh` | 安装/卸载到 `~/.local/bin`（含编译 C 引擎），并生成 fuzzel 入口 |
+| `portal_cast.py` / `portal_cast.c` | **远端侧** portal 客户端（Python 版 / C 版）：ScreenCast → PipeWire → 裸视频写 stdout |
 | `portal-cast.sh` | 命令行一键启动器（不开 TUI） |
 | `niri-cast-rule.sh` | niri 窗口规则装/卸/查（半幅窗口 + `tiled-state`） |
 | `remote-mirror-prep.sh` | **在远端跑**：体检/安装依赖、探测输出名、抓屏实测 |
