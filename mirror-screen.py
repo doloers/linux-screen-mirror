@@ -945,18 +945,20 @@ class TUI:
         self._add(y, 2, "将执行：", curses.A_BOLD)
         y += 1
         for line in self._wrap(preview(self.cfg), w - 4):
+            if y >= h - 4:
+                break
             self._add(y, 4, line, curses.A_DIM)
             y += 1
         y += 1
         if self.cfg["mode"] == MODE_WAYPIPE:
             self._add(y, 2, "[注意] waypipe 模式显示的是远端程序，不是远端屏幕", curses.A_BOLD)
             y += 1
+        # 提示与状态钉在底栏上方：行数多时也不会被挤出屏幕（否则动作反馈看不见）
         hint = self.rows[self.sel].get("hint", "")
         if hint:
-            self._add(y, 2, hint[: w - 4], curses.A_DIM)
-            y += 1
+            self._add(h - 3, 2, hint[: w - 4], curses.A_DIM)
         if self.status:
-            self._add(y, 2, self.status[: w - 4], curses.A_BOLD)
+            self._add(h - 2, 2, self.status[: w - 4], curses.A_BOLD)
         self._add(h - 1, 0, " ↑↓ 选择  Enter 编辑/执行  ←→ 切换  Ctrl-L 候选主机  Ctrl-R 投屏  Ctrl-W 唤醒远端  q 退出 ".ljust(w - 1), curses.A_REVERSE)
         self.scr.refresh()
 

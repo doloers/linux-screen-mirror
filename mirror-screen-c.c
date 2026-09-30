@@ -1002,14 +1002,15 @@ static void tui_draw(void) {
     char lines[24][512];
     int nl = 0;
     wrap_text(prev, w - 4 > 0 ? w - 4 : 40, lines, &nl, 20);
-    for (int i = 0; i < nl; i++) { put(y, 4, lines[i], A_DIM); y++; }
+    for (int i = 0; i < nl && y < h - 4; i++) { put(y, 4, lines[i], A_DIM); y++; }
     y++;
     if (strcmp(kv_get("mode"), MS_MODES[2]) == 0) {
         put(y, 2, "[注意] waypipe 模式显示的是远端程序，不是远端屏幕", A_BOLD);
         y++;
     }
-    if (g_rows[g_sel].hint) { put(y, 2, g_rows[g_sel].hint, A_DIM); y++; }
-    if (g_status[0]) put(y, 2, g_status, A_BOLD);
+    /* 提示与状态钉在底栏上方：行数多时也不会被挤出屏幕（否则动作反馈看不见） */
+    if (g_rows[g_sel].hint) put(h - 3, 2, g_rows[g_sel].hint, A_DIM);
+    if (g_status[0]) put(h - 2, 2, g_status, g_err ? A_BOLD : A_NORMAL);
     put(h - 1, 0, " ↑↓ 选择  Enter 编辑/执行  ←→ 切换  Ctrl-L 候选主机  Ctrl-R 投屏  Ctrl-W 唤醒远端  q 退出 ", A_REVERSE);
     refresh();
 }
