@@ -1,0 +1,16 @@
+// 投屏窗口的 niri 规则：半幅屏宽 × 满高，且焦点/工作区切换时尺寸不变。
+// 用法：把这段放进 ~/.config/niri/config.kdl（仓库里的 niri-cast-rule.sh 可自动装/卸）。
+// 前提：mpv 以 --wayland-app-id=portal-cast 启动（mirror-screen.py 已默认带上），
+//      这样规则只匹配投屏窗口，不影响日常看视频的 mpv（它们的 app-id 仍是 "mpv"）。
+window-rule {
+    match app-id=r#"^portal-cast$"#
+
+    // ★ 关键一行：告诉 mpv “你在平铺布局里”。
+    //   否则 mpv 会按视频尺寸自己“吸附”窗口 —— 现象是窗口永远比邻窗矮一截（997 vs 1013），
+    //   而且聚焦/失焦、切工作区时还会跳。同样的坑 foot 也有（按字符格吸附 ⇒ 底部白隔 10~20px），
+    //   所以很多人给 foot 也加这条。
+    tiled-state true
+
+    // 半幅宽；高度不用写：niri 会把平铺窗口铺满「可用高度 − 上下 gaps」。
+    default-column-width { proportion 0.5; }
+}
