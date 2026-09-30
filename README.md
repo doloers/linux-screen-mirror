@@ -62,8 +62,9 @@
 git clone https://github.com/doloers/linux-screen-mirror
 cd linux-screen-mirror
 
-./install-mirror-screen.sh           # 装到 ~/.local/bin + 两个 fuzzel 入口
-mirror-screen                        # 打开 TUI 配置界面
+./install-mirror-screen.sh           # 编译 C 版主程序 + 装到 ~/.local/bin + fuzzel 入口
+mirror-screen                        # 打开 TUI 配置界面（C/ncurses）
+mirror-screen-py                     # Python 版界面（回退/对照）
 mirror-screen --run                  # 用已保存配置直接开播（可绑快捷键）
 mirror-screen --check                # 远端体检
 mirror-screen --dry-run              # 只打印将要执行的命令
@@ -132,7 +133,11 @@ window-rule {
 | 进程 | 位置 | Python 版 | C 版 | 收益 |
 |---|---|---|---|---|
 | `portal_cast` | **远端（被投屏机）** | 25.3 MB / 启动 0.37–0.41 s | **1.2 MB / 0.07–0.10 s** | 省 24 MB，每次开播省 ~0.3 s |
-| `mirror-screen-c` | 本机（投屏期间常驻的监管进程） | 27.9 MB / 启动 77 ms | **1.9 MB / 1 ms** | 省 26 MB |
+| `mirror-screen` | 本机（配置界面 + 投屏期间常驻的监管进程） | 27.9 MB / 启动 77 ms | **~2 MB / 1 ms** | 省 26 MB |
+
+配置界面（TUI）也已经是 C（ncurses）：`mirror-screen` 不带参数就是它，按 Ctrl-R 开播后自动脱离终端。
+主程序所有选项（`--run/--dry-run/--print-config/--wake/--check/--list-hosts`）都在 C 版里；
+Python 版完整保留为 `mirror-screen-py`（回退/对照用），两边共用同一份 `config.json`，可互相读写。
 
 - **远端客户端** `portal_cast.c`：只依赖 `libdbus`（不再需要 python3-dbus / PyGObject）。
   首次开播时**在远端自动编译**（`gcc -O2 … $(pkg-config --cflags --libs dbus-1)`），编译不出来或运行失败
@@ -163,13 +168,14 @@ window-rule {
 
 | 文件 | 说明 |
 |---|---|
-| `mirror-screen.py` | TUI 主程序（配置界面 + 三种模式的执行逻辑） |
-| `mirror-screen-c.c` | 本机监管引擎（C）：预检 / 管线 / 日志 / 收尾，1.9 MB 常驻 |
+| `mirror-screen-c.c` | **主程序**：TUI 配置界面（ncurses）+ 运行时引擎，编译成一个二进制 |
+| `mirror-screen.py` | Python 版（保留为 `mirror-screen-py`，回退/对照） |
 | `install-mirror-screen.sh` | 安装/卸载到 `~/.local/bin`（含编译 C 引擎），并生成 fuzzel 入口 |
 | `portal_cast.py` / `portal_cast.c` | **远端侧** portal 客户端（Python 版 / C 版）：ScreenCast → PipeWire → 裸视频写 stdout |
 | `portal-cast.sh` | 命令行一键启动器（不开 TUI） |
 | `niri-cast-rule.sh` | niri 窗口规则装/卸/查（半幅窗口 + `tiled-state`） |
 | `remote-mirror-prep.sh` | **在远端跑**：体检/安装依赖、探测输出名、抓屏实测 |
+| `gen-consts.py` / `ms_consts.h` | 从 Python 侧自动导出常量（模式/档位/远端脚本/默认值）→ C 头文件，避免两边手抄不一致 |
 | `configs/` | niri 窗口规则片段、TUI 配置示例 |
 | `docs/` | AirPlay/Linux 投屏生态调研、全部实测证据 |
 

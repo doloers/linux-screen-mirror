@@ -99,3 +99,14 @@ Python 解释器 + `gi`/`dbus` 的导入开销让远端客户端要 0.37 s / 25 
 **踩到的 C 坑**（都在 README 的坑列表里）：D-Bus 父子迭代器混用、`DBUS_TYPE_STRING` 传值语义、
 libdbus 1.16 删掉 unix fd 公开 API（改用 `fcntl` 试探值本身是不是 fd）、GStreamer 参数单 token、
 以及"用 gcc 编译时别把输出管道给 `head`"（SIGPIPE 会让编译静默失败）。
+
+## TUI 也搬进 C 之后（2026-10-01）
+
+- 一个二进制搞定：`mirror-screen` 不带参数 = ncurses 配置界面；带参数 = `--run/--dry-run/--print-config/--wake/--check/--list-hosts`。
+  TUI 里 Ctrl-R 开播时会 `fork + setsid` 出自己（`--run`）再退出，于是终端窗口关闭、投屏在后台跑 —— 与 Python 版行为一致。
+- **常量单一来源**：模式名、档位列表、远端体检/探测脚本、默认配置都从 `mirror-screen.py` 自动导出成 `ms_consts.h`
+  （`gen-consts.py`，安装时生成），C 侧不手抄，避免两边漂移。
+- **配置互操作**：两版读写同一份 `config.json`，实测 C 存 → Python 读、Python 存 → C 读都正常，
+  字段逐字段一致（含布尔/字符串类型）。
+- 顺手修了一个 Python 版就有的 bug：`is_stream` 原本写成 `== MODE_STREAM`，导致 **portal 模式下看不到
+  fps/缩放/硬解/远端客户端/锁定窗口尺寸等专用选项**（它们只在 wf-recorder 模式出现）。改成 `!= MODE_WAYPIPE`，两版一致。

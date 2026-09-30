@@ -861,7 +861,9 @@ class TUI:
 
     def build_rows(self):
         c = self.cfg
-        is_stream = c["mode"] == MODE_STREAM
+        # 注意：portal 与 wf-recorder 共用这批行（waypipe 才是另一套）。
+        # 2026-10-01 修正：原为 `== MODE_STREAM`，导致 portal 模式下看不到 fps/缩放/硬解/远端客户端等专用选项。
+        is_stream = c["mode"] != MODE_WAYPIPE
         rows = [
             dict(kind="cycle", key="mode", label="模式", choices=MODES, value=c["mode"],
                  hint="wf-recorder 流 = 把远端屏幕投过来（推荐，已实测）；waypipe = 把远端应用拿到本机跑，【不能】镜像远端屏幕"),

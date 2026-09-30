@@ -37,7 +37,7 @@ EOF
 
 case "${1:-install}" in
   --uninstall|uninstall)
-    rm -f "$BIN" "$BIN_DIR/mirror-screen-c" "$BIN_DIR/portal_cast.py" "$BIN_DIR/portal_cast.c" "$APP_DIR/mirror-screen.desktop" "$APP_DIR/mirror-screen-quick.desktop"
+    rm -f "$BIN" "$BIN_DIR/mirror-screen-c" "$BIN_DIR/mirror-screen-py" "$BIN_DIR/ms_consts.h" "$BIN_DIR/portal_cast.py" "$BIN_DIR/portal_cast.c" "$APP_DIR/mirror-screen.desktop" "$APP_DIR/mirror-screen-quick.desktop"
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$APP_DIR" 2>/dev/null || true
     echo "已卸载：$BIN 与两个 .desktop"
     echo "配置保留在 $CFG_DIR（要一并删除：rm -rf '$CFG_DIR'）"
@@ -55,16 +55,29 @@ esac
 
 mkdir -p "$BIN_DIR" "$APP_DIR"
 install -m 755 "$SRC/mirror-screen.py" "$BIN"
-# C 版运行时引擎（投屏时常驻的监管进程；编不出来就跳过，TUI 会自动回退 Python 实现）
+# 备份 Python 版入口（保留为 mirror-screen-py，可随时回退）
+install -m 755 "$SRC/mirror-screen.py" "$BIN_DIR/mirror-screen-py"
+# C 版主程序（TUI + 运行时引擎）：常量从 Python 侧自动导出，避免两边手抄不一致
+TMPC=$(mktemp -d)
 if command -v gcc >/dev/null 2>&1 && [ -f "$SRC/mirror-screen-c.c" ]; then
-    if gcc -O2 -s -o "$BIN_DIR/mirror-screen-c" "$SRC/mirror-screen-c.c" 2>/dev/null; then
-        echo "  已装 C 引擎: $BIN_DIR/mirror-screen-c（投屏监管进程 ~1.2MB，Python 版 27.9MB）"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 "$SRC/gen-consts.py" > "$TMPC/ms_consts.h" 2>/dev/null || cp -f "$SRC/ms_consts.h" "$TMPC/" 2>/dev/null
     else
-        echo "  （C 引擎编译失败，跳过；投屏会走 Python 实现，功能一致）"
+        cp -f "$SRC/ms_consts.h" "$TMPC/" 2>/dev/null
     fi
+    if gcc -O2 -s -I"$TMPC" -o "$TMPC/mirror-screen" "$SRC/mirror-screen-c.c" -lncursesw -ldl 2>"$TMPC/err"; then
+        install -m 755 "$TMPC/mirror-screen" "$BIN_DIR/mirror-screen"
+        ln -sf "$BIN_DIR/mirror-screen" "$BIN_DIR/mirror-screen-c"
+        echo "  已装 C 版主程序: $BIN_DIR/mirror-screen（TUI + 引擎；投屏监管进程 ~1.9MB，Python 版 27.9MB）"
+    else
+        echo "  （C 版编译失败，主入口仍用 Python 版；原因：$(head -2 "$TMPC/err" | tr '\n' ' ')）"
+    fi
+    # ms_consts.h 一并装好，便于离线重编
+    [ -f "$TMPC/ms_consts.h" ] && install -m 644 "$TMPC/ms_consts.h" "$BIN_DIR/ms_consts.h"
 else
-    echo "  （无 gcc 或缺源文件，跳过 C 引擎）"
+    echo "  （无 gcc，主入口用 Python 版 mirror-screen-py）"
 fi
+rm -rf "$TMPC"
 # 远端 portal 客户端的源码：python 版是回退，c 版会在手机上编译（更快更省）
 for f in portal_cast.py portal_cast.c; do
     [ -f "$SRC/$f" ] && install -m 644 "$SRC/$f" "$BIN_DIR/$f"

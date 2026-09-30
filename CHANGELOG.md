@@ -1,5 +1,16 @@
 # 更新记录
 
+## 1.2.0 — 2026-10-01
+
+TUI 也搬进 C，主程序现在是一个二进制：
+
+- `mirror-screen-c.c` = ncurses 配置界面 + 运行时引擎；不带参数开界面，`--run/--dry-run/--print-config/--wake/--check/--list-hosts` 全支持。
+- 常量从 Python 侧自动导出（`gen-consts.py` → `ms_consts.h`），两边不手抄。
+- Python 版保留为 `mirror-screen-py`；两版共用 `config.json`，实测双向互操作、字段一致。
+- 修 bug：`is_stream` 原为 `== MODE_STREAM`，导致 portal 模式下看不到 fps/缩放/硬解/远端客户端等专用选项。
+- 安装脚本会编译 C 版并安装；无 gcc 时自动仍用 Python 版。
+
+
 ## 1.1.0 — 2026-09-30
 
 热路径 C 重写（功能不变）：
