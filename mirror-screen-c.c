@@ -880,6 +880,8 @@ static int in_choices(const char **ch, const char *v) {
 
 static void build_rows(void) {
     g_nrows = 0;
+    /* 最上面就是「开始投屏」：打开界面 → Enter 即可开播 */
+    row_add('a', NULL, "▶ 开始投屏", NULL, "Enter 立即投屏（Ctrl-R 同效）；关掉 mpv 窗口即自动结束", "run");
     int is_portal = strcmp(kv_get("mode"), MS_MODES[0]) == 0;
     int is_stream = strcmp(kv_get("mode"), MS_MODES[2]) != 0;   /* portal 与 wf-recorder 共用这批行（waypipe 才是另一套） */
     row_add('c', "mode", "模式", MS_MODES,
@@ -913,7 +915,6 @@ static void build_rows(void) {
     row_add('b', "quiet", "运行时不刷报文", NULL, "远端报告 + mpv 静默；日志写 ~/.local/state/mirror-screen/last-run.log", NULL);
     row_add('b', "exit_on_close", "关掉窗口即退出", NULL, "mpv 窗口一关就结束整个程序，并顺手清理远端残留", NULL);
     row_add('b', "close_tui", "投屏时关闭本界面", NULL, "开投屏后把 TUI 连同终端窗口一起关掉，只留投屏窗口", NULL);
-    row_add('a', NULL, "▶ 开始投屏", NULL, "Ctrl-R；关掉 mpv 窗口即自动结束", "run");
     row_add('a', NULL, "唤醒远端屏幕", NULL, "wlr-randr --output <输出名> --on", "wake");
     row_add('a', NULL, "体检远端环境", NULL, "桌面/工具/抓屏实测(含息屏检测)/Vulkan", "check");
     row_add('a', NULL, "探测远端输出名", NULL, "niri→sway→hyprctl→wlr-randr 依次尝试", "probe");

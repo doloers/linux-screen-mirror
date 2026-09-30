@@ -865,6 +865,8 @@ class TUI:
         # 2026-10-01 修正：原为 `== MODE_STREAM`，导致 portal 模式下看不到 fps/缩放/硬解/远端客户端等专用选项。
         is_stream = c["mode"] != MODE_WAYPIPE
         rows = [
+            # 最上面就是「开始投屏」：打开界面 → Enter 即可开播
+            dict(kind="action", label="▶ 开始投屏", action="run", hint="Enter 立即投屏（Ctrl-R 同效）；关掉 mpv 窗口即自动结束"),
             dict(kind="cycle", key="mode", label="模式", choices=MODES, value=c["mode"],
                  hint="wf-recorder 流 = 把远端屏幕投过来（推荐，已实测）；waypipe = 把远端应用拿到本机跑，【不能】镜像远端屏幕"),
             dict(kind="text", key="host", label="目标主机", value=c["host"], hint="远端 IP/主机名；Ctrl-L 选候选"),
@@ -913,7 +915,6 @@ class TUI:
                  hint="mpv 窗口一关就结束整个程序，并顺手清理远端 wf-recorder（不留下残留进程）"),
             dict(kind="toggle", key="close_tui", label="投屏时关闭本界面", value=c.get("close_tui", True),
                  hint="开投屏后把 TUI 连同它所在的终端窗口一起关掉，只留投屏窗口（后台盘居进程负责收尾）"),
-            dict(kind="action", label="▶ 开始投屏", action="run", hint="Ctrl-R；关掉 mpv 窗口即自动结束"),
             dict(kind="action", label="唤醒远端屏幕", action="wake", hint="wlr-randr --output <输出名> --on"),
             dict(kind="action", label="体检远端环境", action="check", hint="桌面/工具/抓屏实测(含息屏检测)/Vulkan，缺什么直接告诉你"),
             dict(kind="action", label="探测远端输出名", action="probe", hint="niri→sway→hyprctl→wlr-randr 依次尝试"),
