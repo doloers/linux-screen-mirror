@@ -1,5 +1,16 @@
 # 更新记录
 
+## 1.2.2 — 2026-10-01
+
+- 修：**清残留只清 `wf-recorder`，从不碰 `portal_cast`/`gst-launch`**。portal 模式下手机静止时 `portal_cast`
+  不会往 stdout 写（没帧就不写），也就收不到 ssh 断开的写失败，**ssh 会话结束后它不会自己退出** ——
+  每失败/中断一次就多一组 `portal_cast`+`gst-launch` 僵尸会话，堆积后新的抓屏会话拿不到帧
+  （现象：本机 mpv 窗口全黑，远端 `gst-launch` 报 `not-negotiated (-4)` 或干脆 0 字节）。
+  预检与收尾现在统一清 `portal_cast` / `gst-launch-1.0` / `wf-recorder` 三类；收尾日志的
+  `STILL-ALIVE` 也改为盯 `portal_cast`（原来的真漏点）。C 版与 Python 版同步改。
+- 实测（OnePlus 6 / postmarketOS）：人为造 2 组残留 → 开播时预检全部清掉、只留本次会话，收帧正常；
+  关窗后远端三类进程均为 0。
+
 ## 1.2.1 — 2026-10-01
 
 - TUI：「▶ 开始投屏」提到列表**最上面**（打开界面光标就在它上面，Enter 即可开播），两个版本一致。

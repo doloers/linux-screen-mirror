@@ -735,7 +735,9 @@ def _run_pipeline_inner(cfg: dict, logpath: Path) -> int:
             pre = []
             if cfg.get("wake") and out_name:
                 pre.append(f"wlr-randr --output {out_name} --on")
-            pre.append("pkill -9 -x wf-recorder")
+            # 清残留：portal 模式的 portal_cast/gst-launch 也要清（手机静止时它收不到写失败，
+            # ssh 断开后不会自己退出，会一组组堆积，把后续抓屏会话卡死）
+            pre.append("pkill -9 -x portal_cast ; pkill -9 -x gst-launch-1.0 ; pkill -9 -x wf-recorder")
             try:
                 cr = subprocess.run(ssh_argv(cfg) + [" ; ".join(pre) + " ; true"],
                                     stdout=log, stderr=log, timeout=15)
@@ -792,7 +794,9 @@ def _run_pipeline_inner(cfg: dict, logpath: Path) -> int:
             terminate_proc(r)
             # 远端编码器兑底清理（ssh 断开后一般会自行退出，这里确保一下）
             try:
-                cr = subprocess.run(ssh_argv(cfg) + ["pkill -9 -x wf-recorder ; pgrep -x wf-recorder >/dev/null && echo STILL-ALIVE || true"],
+                cr = subprocess.run(ssh_argv(cfg) + ["pkill -9 -x portal_cast ; pkill -9 -x gst-launch-1.0 ; "
+                                                     "pkill -9 -x wf-recorder ; "
+                                                     "pgrep -x portal_cast >/dev/null && echo STILL-ALIVE || true"],
                                     stdout=log, stderr=log, timeout=10)
                 log.write(f"[cleanup] 远端 pkill rc={cr.returncode}\n".encode())
             except Exception as e:

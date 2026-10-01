@@ -514,7 +514,10 @@ static int run_cast(const Cfg *c) {
     if (c->wake || 1) {
         char pre[1024] = "";
         if (c->wake && c->output[0]) snprintf(pre, sizeof pre, "wlr-randr --output %s --on ; ", c->output);
-        strncat(pre, "pkill -9 -x wf-recorder ; true", sizeof pre - strlen(pre) - 1);
+        /* 清残留：portal 模式的 portal_cast/gst-launch 也在内 —— 手机静止时 portal_cast 收不到
+           写失败（没帧就不写 stdout），ssh 断开后它不会自己退出，会一组组堆积，把后续抓屏会话卡死 */
+        strncat(pre, "pkill -9 -x portal_cast ; pkill -9 -x gst-launch-1.0 ; pkill -9 -x wf-recorder ; true",
+                sizeof pre - strlen(pre) - 1);
         char *pargv[MAXARGS];
         int pn = 0;
         for (int i = 0; i < base; i++) pargv[pn++] = sargv[i];
@@ -577,7 +580,8 @@ static int run_cast(const Cfg *c) {
     char *cargv[MAXARGS];
     int cn = 0;
     for (int i = 0; i < base; i++) cargv[cn++] = sargv[i];
-    append_argv(cargv, &cn, "pkill -9 -x wf-recorder ; pgrep -x wf-recorder >/dev/null && echo STILL-ALIVE || true");
+    append_argv(cargv, &cn, "pkill -9 -x portal_cast ; pkill -9 -x gst-launch-1.0 ; pkill -9 -x wf-recorder ; "
+                             "pgrep -x portal_cast >/dev/null && echo STILL-ALIVE || true");
     int crc = run_silent(cargv);
     logline("[cleanup] 远端 pkill rc=%d", crc);
 
