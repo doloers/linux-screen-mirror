@@ -183,6 +183,7 @@ Python 版完整保留为 `mirror-screen-py`（回退/对照用），两边共�
 
 - [`docs/research-airplay-and-linux-casting.md`](docs/research-airplay-and-linux-casting.md) —— AirPlay 在 Linux 的生态调研 + Linux→Linux 各家方案对比（waypipe / wayvnc / Sunshine+Moonlight / wf-recorder）
 - [`docs/evidence-measurements.md`](docs/evidence-measurements.md) —— 逐条实测记录（延迟、CPU、带宽、窗口尺寸、坑的复现与结论）
+- [`docs/evidence/`](docs/evidence/) —— 上述两篇引用的**原始输出**（`local-check.txt` 本机环境核对、`linux-to-linux-probe.txt` 能力探测、`waypipe-transport-selftest.txt` 传输实验、`phone-mirror-*.png` 手机→本机成图）
 - [`NOTES.md`](NOTES.md) —— 实现细节与设计取舍
 - [`CHANGELOG.md`](CHANGELOG.md)
 

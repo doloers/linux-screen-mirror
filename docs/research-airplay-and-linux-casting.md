@@ -1,8 +1,8 @@
 # Linux 上 AirPlay 开发情况调研 — 归档
 
 **时间**：2026-09-30
-**归档位置**：`~/AIworks/01-技术研究/2026-09-30_AirPlay-Linux生态调研/`
-**起因**：承接 [`2026-09-28_投屏与网络栈迁移`](../2026-09-28_投屏与网络栈迁移/)——那条线卡在 doubletake → 小米电视的最后一跳，需要一个"整体生态是什么状态、还有没有别的路"的判断
+**来源**：本机（Arch Linux + niri 26.04）只读实测笔记；原始输出见 [`evidence/`](evidence/)
+**起因**：承接前置研究「2026-09-28 投屏与网络栈迁移」——那条线卡在 doubletake → 小米电视的最后一跳，需要一个"整体生态是什么状态、还有没有别的路"的判断
 **结果**：定性清楚 —— **Linux 当 AirPlay 接收端已经工业级成熟；当发送端（Linux → Apple TV/电视）是整个生态最薄的一环，全球实际上只有一个活跃项目**。本调研为**只读**（未改动本机任何配置、未装任何包）
 
 ---
@@ -116,7 +116,7 @@
 
 ## 八、附：另一台 Linux 投屏到本机（Linux→Linux 实操方案）
 
-**一句话**：Linux 之间没有原生的统一"投屏"协议，可选的都是"一对工具对撞"。本机（AURA-ARCH / niri 26.04）实测能力与五种方案见下（原始探测输出：`evidence/linux-to-linux-probe.txt`）。
+**一句话**：Linux 之间没有原生的统一"投屏"协议，可选的都是"一对工具对撞"。本机（Arch Linux / niri 26.04）实测能力与五种方案见下（原始探测输出：[`evidence/linux-to-linux-probe.txt`](evidence/linux-to-linux-probe.txt)）。
 
 **本机相关实测**（2026-09-30）：
 
@@ -144,7 +144,7 @@ doubletake -target 172.16.60.184 -port 7100 -pin 1234 -hwaccel vaapi
 
 # —— 本机（接收）：UxPlay 的端口必须固定下来
 pkill -x uxplay
-setsid nohup stdbuf -oL -eL uxplay -n "AURA-ARCH" -nh -vs waylandsink -p 7100 -pin 1234 \
+setsid nohup stdbuf -oL -eL uxplay -n "<本机显示名>" -nh -vs waylandsink -p 7100 -pin 1234 \
   >~/aur-builds/uxplay-run.log 2>&1 &   # -p 7100 ⇒ TCP/UDP 7100/7101/7102
 ```
 
@@ -167,7 +167,7 @@ setsid nohup stdbuf -oL -eL uxplay -n "AURA-ARCH" -nh -vs waylandsink -p 7100 -p
 > 所以 `wl-mirror <远端输出名>` 必失败：`error: options::find_output(): output DSI-1 not found`。
 > **waypipe 仍有价值，但用途是**“把远端的**应用**拿到本机跑”（如 `waypipe --no-gpu -c lz4 ssh 对方 foot`），不是屏幕镜像。
 
-保留的两条实测结论仍有效：① 本机没装 Vulkan 驱动时 waypipe 会因 DMABUF 通道直接崩（需 `--no-gpu` 或装 `vulkan-intel`）；② `--no-gpu` 只需加在本地 client 侧（证据：`evidence/waypipe-transport-selftest.txt`）。
+保留的两条实测结论仍有效：① 本机没装 Vulkan 驱动时 waypipe 会因 DMABUF 通道直接崩（需 `--no-gpu` 或装 `vulkan-intel`）；② `--no-gpu` 只需加在本地 client 侧（证据：[`evidence/waypipe-transport-selftest.txt`](evidence/waypipe-transport-selftest.txt)）。
 
 ### C. wayvnc + VNC 客户端（要操作对方）
 
@@ -223,7 +223,7 @@ ssh -o BatchMode=yes 用户@远端 \
 窗口显示默认改为「**半幅窗口（浮动）+ 画面顶满**」：实测 mpv 的 `--geometry` 在 Wayland 下无效；平铺窗口在 niri 里
 会被每次焦点变化按「当时的可用高度」重算（997），而旁边窗口停在旧值（1013）⇒ 视觉上永远矮一截。
 最终查明是 **mpv 自己按视频尺寸吸附窗口**，故在 niri 规则里加 `tiled-state true`（与 foot 那条规则同源），
-配合 mpv `--wayland-app-id=portal-cast`；**仍是平铺**，实测窗口恒 810×1013、与邻窗齐平、焦点/工作区切换不变。细节与脚本见 `~/AIworks/02-本机运维/README.md` §六。
+配合 mpv `--wayland-app-id=portal-cast`；**仍是平铺**，实测窗口恒 810×1013、与邻窗齐平、焦点/工作区切换不变。细节与脚本见 [`docs/evidence-measurements.md`](evidence-measurements.md) 与 [`configs/niri-window-rule.kdl`](../configs/niri-window-rule.kdl)。
 
 ### 排除掉的路
 
@@ -242,7 +242,7 @@ ssh -o BatchMode=yes 用户@远端 \
 
 ## 九、来源
 
-**仓库/版本数据**：GitHub REST API 实时查询（`stars` / `pushed_at` / `releases`），AUR RPC v5，本机 `pacman`，核对时间 **2026-09-30**（原始输出见 `evidence/local-check.txt`）。
+**仓库/版本数据**：GitHub REST API 实时查询（`stars` / `pushed_at` / `releases`），AUR RPC v5，本机 `pacman`，核对时间 **2026-09-30**（原始输出见 [`evidence/local-check.txt`](evidence/local-check.txt)）。
 **文档**：shairport-sync `AIRPLAY2.md` / `RELEASENOTES.md`、UxPlay `README.txt` 与 release notes、pyatv 协议文档、PipeWire `module-raop-sink` / `module-raop-discover` 文档、openairplay `airplay-spec` 与 `airplay2-receiver` README、OwnTone 文档与 issue #1882/#1413、doubletake README 与 PR #9/#13、castr / kast README、ArchWiki（Shairport Sync / OwnTone）。
 
 **本调研的边界**：只做资料与公开数据核对，**未在本机安装/启用任何 AirPlay 组件**，未改动既有投屏成果目录；结论以 2026-09-30 的生态状态为准（该领域 6~12 个月就会显著变化，尤其是发送端）。

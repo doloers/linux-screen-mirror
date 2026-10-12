@@ -1,0 +1,42 @@
+# Linux→Linux 投屏相关：本机能力实测 — 2026-09-30 15:50 CST
+# 接收端 = 本机 <本机>（niri 26.04 / Wayland，已装 UxPlay 1.73.7 作为 AirPlay 镜像接收端）
+
+## 1) niri 支持的截屏相关协议（直接从 /usr/bin/niri 二进制查）
+  OK   wlr_screencopy_manager_v1
+  NO   ext_image_copy_capture_manager_v1
+  NO   ext_output_image_capture_source_manager_v1
+  NO   wlr_export_dmabuf_manager_v1
+  NO   wlr_output_management_v1
+  OK   zwp_virtual_keyboard_manager_v1
+  （screencopy 只有 capture_output，没有 capture_output_region ⇒ 是 wlr-screencopy v1 级）
+
+## 2) 相关工具：仓库可用性 / 体积
+  名字           : wayvnc	安装后大小     : 209.51 KiB
+  名字           : waypipe	安装后大小     : 2008.08 KiB
+  名字           : wl-mirror	安装后大小     : 128.03 KiB
+  名字           : wf-recorder	安装后大小     : 122.28 KiB
+  名字           : tigervnc	安装后大小     : 6.97 MiB
+  名字           : mpv	安装后大小     : 6500.51 KiB
+
+## 3) 本机已装的相关工具
+  mpv          mpv 1:0.41.0-6
+  grim         grim 1.5.0-2
+  slurp        slurp 1.5.0-2
+  openssh      openssh 10.5p1-1
+  go           未安装
+  sshd: enabled/active
+
+## 4) AUR 里只有 AUR 才有的
+  sunshine               2026.914.233613-1  votes=84   Self-hosted game stream host for Moonlight
+  sunshine-bin           2026.914.233613-1  votes=22   A self-hosted game stream host for Moonlight.
+  gnome-network-displays 0.99.0-1           votes=47   Screencasting for GNOME. Supports the Miracast and Chromecas
+
+## 5) 现成接收端实测：UxPlay 会话日志（iPhone 已成功连上、镜像已启动后断开）
+  见 ~/aur-builds/uxplay-run.log 摘录：
+    Accepted IPv6 client on socket 26, port 35595
+    connection request from Buffer (iPhone18,4) with deviceID = BE:D7:74:4A:1D:0F
+    Client identified as User-Agent: AirPlay/980.77.1
+    raop_rtp_mirror starting mirroring
+    Begin streaming to GStreamer video pipeline
+    raop_rtp_mirror->running is no longer true
+    Connection closed on socket 26

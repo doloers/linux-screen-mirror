@@ -1,0 +1,48 @@
+# 本机实测证据 — 2026-09-30 14:01 CST
+# 主机: <本机> (Arch Linux) / 内核 7.2.6-arch2-1
+
+## 1) 官方仓库里的 AirPlay 相关包
+$ pacman -Ss "airplay|nqptp"
+extra/nqptp 1.2.8-1
+    A daemon that monitors timing data from PTP clocks
+extra/shairport-sync 5.0.4-3
+    AirPlay and AirPlay 2 audio player
+
+## 2) PipeWire 的 RAOP 模块是否存在（结论：不存在）
+$ pacman -Ql libpipewire | grep -i raop
+(空：libpipewire 不含任何 raop 模块)
+$ pacman -Ql pipewire | grep -i raop
+pipewire /usr/share/pipewire/pipewire.conf.avail/50-raop.conf
+$ find /usr/lib -name "*raop*"
+
+(空)
+$ ldd /usr/lib/libpipewire-0.3.so.0 | grep -Ei "ssl|crypto|avahi"
+(空：未链接 openssl/avahi ⇒ RAOP 模块没被编译进来)
+$ man -w libpipewire-module-raop-sink
+（命令不存在 —— 本机没装 man，此行当时被我误当成“缺 man 页”，2026-09-30 修正：该结论作废；raop 模块缺失仍由 pacman -Ql / find / ldd 三条独立证据成立）
+
+## 3) AUR 中与 AirPlay 直接相关的包
+  uxplay           1:1.73.7-1             votes=16   updated=2026-09-04  AirPlay Unix mirroring server
+  doubletake       0.4.0-3                votes=1    updated=2026-09-29  AirPlay 2 mirroring sender for Linux
+  doubletake-git   0.4.0.r35.gae06722-1   votes=0    updated=2026-09-29  AirPlay mirroring sender for Linux (latest git commit)
+  shairplay        20180824.096b61a-5     votes=3    updated=2025-02-17  Apple airplay and raop protocol server
+
+## 4) 上游关键项目活跃度（GitHub API，复核时间 2026-09-30）
+  mikebrady/shairport-sync         stars=8874    last_push=2026-09-27 archived=False
+  FDH2/UxPlay                      stars=3116    last_push=2026-09-29 archived=False
+  FD-/RPiPlay                      stars=5224    last_push=2023-04-14 archived=False
+  owntone/owntone-server           stars=2562    last_push=2026-09-24 archived=False
+  omarroth/doubletake              stars=105     last_push=2026-09-29 archived=False
+  openairplay/airplay2-receiver    stars=2423    last_push=2026-06-29 archived=False
+  mikebrady/nqptp                  stars=158     last_push=2026-09-27 archived=False
+  philippe44/AirConnect            stars=4186    last_push=2026-09-28 archived=False
+  postlund/pyatv                   stars=1177    last_push=2026-08-14 archived=False
+
+## 5) shairport-sync 最近发布（GitHub releases）
+   5.5.2 2026-09-14
+   5.5.1 2026-09-07
+   5.5 2026-09-04
+
+## 6) doubletake 已提交 issue 状态
+  #4 [open] comments=4  doubletake crashing android tv with first party apple airplay app
+  #56 [open] comments=0  Xiaomi TV (AirPlay "AppleTV3,2" spoof) accepts SETUP, sends no UDP timing, close

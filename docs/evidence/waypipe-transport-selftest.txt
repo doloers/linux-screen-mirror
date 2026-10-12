@@ -1,0 +1,31 @@
+# 方案B：waypipe 传输链路本机端到端自检 — 2026-09-30 15:58 CST
+# 方法：在本机同时跑 waypipe client/server（unix socket 直连），把一个窗口真正转发过去，
+#       以此验证「抓屏 + 传输 + 显示」全链路；只差真实 SSH 一跳
+
+## 失败基线（默认参数，不加 --no-gpu）
+  $ waypipe -c lz4 --socket /tmp/wp.sock client &
+  $ waypipe --socket /tmp/wp.sock server -- foot ... &
+  结果：窗口未出现。server 端报错：
+    [ERR waypipe-server mainloop.rs] Sending error: src/dmabuf.rs: Failed to create Vulkan instance: Unable to find a Vulkan driver
+    err: wayland.c: no compositor
+  原因：本机 intel 核显未安装 Vulkan 驱动（vulkan-intel/vulkan-icd-loader），
+        而 waypipe 编译带了 dmabuf 特性（waypipe --version: dmabuf: true），默认优先 DMABUF/GPU 路径。
+
+## 修复后（--no-gpu）
+  $ waypipe --no-gpu -c lz4 --socket /tmp/wp.sock client &
+  $ waypipe --no-gpu --socket /tmp/wp.sock server -- foot --title=WPTEST-NOGPU sleep inf &
+  结果：✅ 窗口出现
+    niri msg windows → Title: "WPTEST-NOGPU" / App ID: wptest
+    server 唯一告警：compositor does not implement the xdg-toplevel-icon protocol（无害）
+
+## 对照：只有 client 加 --no-gpu，server 不加
+  $ waypipe --no-gpu -c lz4 --socket /tmp/wp.sock client &
+  $ waypipe --socket /tmp/wp.sock server -- foot --title=WPTEST-SRV-GPU sleep inf &
+  结果：✅ 窗口同样出现（Title: "WPTEST-SRV-GPU"）
+  ⇒ --no-gpu 只需加在本地 client 侧；server 会按 client 通告的能力自适应，不会去初始化 Vulkan。
+
+## 对本机最终命令的影响
+  waypipe --no-gpu -c lz4 ssh 用户@对方IP wl-mirror <对方输出名>
+  · --no-gpu  必需（本机无 Vulkan 驱动）
+  · -c lz4    走 CPU 压缩；有 lz4/zstd 可选（waypipe --version 显示两者均可用）
+  · --video h264 需要 DMABUF ⇒ 本机装了 vulkan-intel 后才能用（装了可换硬编视频，更流畅）
